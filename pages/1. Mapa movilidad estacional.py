@@ -7,30 +7,13 @@ Created on Mon Nov 21 15:06:35 2022
 
 import streamlit as st
 import pandas as pd
-import geopandas as gpd
 import folium
 from streamlit_folium import st_folium
 
 APP_TITLE = 'Movilidad estacional'
 APP_SUB_TITLE = 'Fuente: Ine'
 
-# def display_time_filters(df, sex):
-#     year_list = list(df['Año'].unique())
-#     year_list.sort(reverse = True )
-#     year = st.sidebar.selectbox('Año', year_list, 0)
-#     if year == 2023:
-#         quarter = st.sidebar.radio('Trimestre', [1])
-#     else:
-#         quarter = st.sidebar.radio('Trimestre', [1, 2, 3, 4])
-#     st.header(f'{year} T{quarter} - {sex}' )
-#     return year, quarter
-
-# def display_prov_filter(df, prov):
-    
-#     return st.sidebar.selectbox('Provincia', prov_list)
-
-
-
+geo = 'celdas_marzo_2020-4.json'
 
 def display_day():
     return st.sidebar.radio('Día', ['20 Julio 2019', '15 Agosto 2019', '24 Noviembre 2019', '25 Diciembre 2019'])
@@ -111,21 +94,18 @@ def load_data():
     df = df.reset_index()
     df = df.rename(columns={"Código área de pernoctación":"ID_GRUPO"})
     
-    areas_geo = 'celdas_marzo_2020-4.json'
+
     dfe = df_estacional
-    geo = gpd.read_file(areas_geo)
+
  
-    return df, dfe, df_areas, geo
+    return df, dfe, df_areas
 
 
-df, dfe, df_areas, geo = load_data()
+df, dfe, df_areas = load_data()
 area_data = 0 #inicialmente no hay área seleccionada
 day = display_day() #obtenemos el día seleccionado de los 4 posibles
 
 
-# option = st.sidebar.selectbox(
-#     'Elige área',
-#      sorted(df_areas['LITERAL_GRUPO'].unique()))
 
 print ("Mando a dibujar")
 area_code = display_map(df, day, geo)

@@ -7,21 +7,12 @@ Created on Fri Jun  9 10:11:27 2023
 """
 
 import streamlit as st
-
-
-
-
 import pandas as pd
-import geopandas as gpd
 import matplotlib.pyplot as plt
-
-#APP_TITLE = 'Flujos por área'
-#APP_SUB_TITLE = 'Fuente: Ine'
 
 
 st.markdown("# Flujos de población")
 
-#st.sidebar.markdown("# Page 2 ❄️")
 
 st.markdown("Se muestra a continuación el detalle de los flujos de población para el área seleccionada. ")
 st.markdown("Para ello se van a utilizar dos gráficas de barras donde se muestran por orden decreciente los flujos experimentados en las áreas donde ha ido o ha venido más gente.")
@@ -66,18 +57,15 @@ def load_data():
     df = df.reset_index()
     df = df.rename(columns={"Código área de pernoctación":"ID_GRUPO"})
     
-    areas_geo = 'celdas_marzo_2020-4.json'
+
     dfe = df_estacional
-    geo = gpd.read_file(areas_geo)
+
  
-    return df, dfe, df_areas, geo
+    return df, dfe, df_areas
 
-df, dfe, df_areas, geo = load_data()
+df, dfe, df_areas = load_data()
 
 
-# option = st.sidebar.selectbox(
-#     'Elige área',
-#      sorted(df_areas['ID_GRUPO'].unique()))
 
 day = display_day() #obtenemos el día seleccionado de los 4 posibles
 
@@ -95,48 +83,6 @@ dfw['new_index'] = [2,1,3,4]
 dfw = dfw.reset_index()
 dfw = dfw.set_index('new_index')
 dfw = dfw.sort_index()
-
-
-#st.write(dfw)
-#st.write(dfw.index)
-
-
-# fig = plt.figure(figsize=(10,10))
-# dfw['positivo'] = dfw['porcentaje_variacion'] > 0
-# plt.bar(dfw.FECHA, dfw.porcentaje_variacion, width=0.8, color=dfw.positivo.map({True: 'b', False: 'r'}), label="Variación de población")
-# plt.grid(axis='y', color='0.85')
-# plt.ylim(-100, 100)
-# st.pyplot(fig)
-
-
-# fig = plt.figure(figsize=(10, 10))
-# plt.grid(linestyle="-.", linewidth=1, color='lightgray')
-# plt.plot(dfw.FECHA, dfw.llegan, marker='', linestyle='dashed', color='black',  linewidth=3, markersize=5, label="llegan")
-# plt.plot(dfw.FECHA, dfw['Nº de residentes en área de residencia que pernoctan en área de pernoctación'], marker='', linestyle='dashed', color='brown',  linewidth=3, markersize=5, label="Pernoctan")
-
-# plt.xticks(rotation=45)
-# plt.legend(loc = "upper left", fontsize = 15)
-# #plt.title("Población que llega a ", fontsize=30, verticalalignment='bottom')
-# plt.xlabel("Fecha", fontsize=20)
-# plt.ylabel("Ciudadanos", fontsize=20)
-# #plt.show()
-# st.pyplot(fig)
-
-
-#centroid_equal_area = geo.query('ID_GRUPO == @option').to_crs('+proj=cea').centroid.to_crs(geo.crs)
-
-
-#print (centroid_equal_area)
-
-# m = folium.Map(location=[40.42,  -3.7], zoom_start=5, tiles='Stamen Toner')
-# coropletas = folium.Choropleth(geo_data=geo,name="choropleth",data=df,columns=["ID_GRUPO", "porcentaje_variacion"],key_on="properties.ID_GRUPO", fill_color="RdYlBu",fill_opacity=0.4,line_opacity=1.0,legend_name="Variación de población (%)")
-# print ("Añadiendo coropletas al mapa")
-# coropletas.add_to(m)
-# st_map = st_folium(m, width=700, height=450)
-
-#day = "15 Agosto 2019"
-
-
 
 
 
