@@ -7,6 +7,7 @@ Created on Mon Nov 21 15:06:35 2022
 
 import streamlit as st
 import pandas as pd
+import geopandas as gpd
 import folium
 from streamlit_folium import st_folium
 
@@ -28,24 +29,30 @@ APP_SUB_TITLE = 'Fuente: Ine'
     
 #     return st.sidebar.selectbox('Provincia', prov_list)
 
+
+
+
 def display_day():
     return st.sidebar.radio('Día', ['20 Julio 2019', '15 Agosto 2019', '24 Noviembre 2019', '25 Diciembre 2019'])
 
 
-def display_map(df, day):
+def display_map(df, day, geo):
     
     
     df = df.query('FECHA == @day')
 
-    m = folium.Map(location=[40.42,  -3.7], zoom_start=5, tiles='Stamen Toner')
+    m = folium.Map(location=[40.42,  -3.7], zoom_start= 6 , tiles='Stamen Terrain')
     print ("Asignando coropletas")
-    coropletas = folium.Choropleth(geo_data=areas_geo,name="choropleth",data=df,columns=["ID_GRUPO", "porcentaje_variacion"],key_on="properties.ID_GRUPO", fill_color="RdYlBu",fill_opacity=0.4,line_opacity=1.0,legend_name="Variación de población (%)")
+    coropletas = folium.Choropleth(geo_data=geo,name="choropleth",data=df,columns=["ID_GRUPO", "porcentaje_variacion"],key_on="properties.ID_GRUPO", fill_color="RdYlBu",fill_opacity=0.4,line_opacity=1.0,legend_name="Variación de población (%)")
     print ("Añadiendo coropletas al mapa")
     coropletas.add_to(m)
     print ("Asignando tooltips")
+    
     for feature in coropletas.geojson.data['features']:
         code = feature['properties']['ID_GRUPO']
-        feature['properties']['Area'] = str(set(list(df_areas.query('ID_GRUPO == @code')['LITERAL_GRUPO'])))
+        p = df.query('ID_GRUPO == @code and FECHA == @day')['porcentaje_variacion'].iloc[0]
+        feature['properties']['Area'] = df_areas.query('ID_GRUPO == @code')['LITERAL_GRUPO'].iloc[0] + "<br> Porcentaje de variación: <b>"  + str(round(p,2)) + "%</b>"
+        #feature['properties']['Area'] = "hola" #str(set(list(df_areas.query('ID_GRUPO == @code')['LITERAL_GRUPO'])))
     coropletas.geojson.add_child(folium.features.GeoJsonTooltip(['Area'], labels=False))
     print ("Agregando capa")
     folium.LayerControl().add_to(m)
@@ -56,23 +63,17 @@ def display_map(df, day):
         codigo = st_map['last_active_drawing']['properties']['ID_GRUPO']
     return codigo
 
-# def display_datos_paro(df, year, quarter, sex, prov_name):
-#     df = df[(df['Año'] == year) & (df['Trimestre'] == quarter) & (df['Sexo'] == sex) & (df['Provincia'] == prov_name)]    
-#     st.metric(sex, str(df.Paro.iat[0])+' %')
 
 st.set_page_config(APP_TITLE)
 st.title(APP_TITLE)
 st.caption(APP_SUB_TITLE)
 
-areas_geo = 'celdas_marzo_2020-4.json'
-#prov_paro = 'TasaParoProvSeTr.csv'
-#prov_data = pd.read_csv(prov_paro, encoding='utf-8')
-#Sexo	Codigo	Provincia	Trimestre	Paro
-#El código de provincia en el geojson es str y con cero a la izquierda
-#prov_data['codigo'] = prov_data['codigo'].astype(str).str.zfill(2)
+st.markdown("Se muestran los movimientos de las personas (sus teléfonos móviles) durante **cuatro días** en particular que se pueden seleccionar en la izquierda de esta página.")
+st.markdown("Se considera que una persona se ha movido cuando su área de pernoctación es **distinta** a su área de residencia")
+st.markdown("En el mapa se representa la variación del **porcentaje de población experimentada** en **3241 áreas de España**. Cuanto más :red[rojo] es que más gente se ha ido del área y cuanto más :blue[azul] es que más gente ha llegado.")
 
-#prov_list = list(prov_data['Provincia'].unique())
-#prov_dict = pd.Series(prov_data.Provincia.values,index=prov_data.codigo).to_dict()
+
+
 
 
 
@@ -109,15 +110,25 @@ def load_data():
     df = df_estacional_agregado
     df = df.reset_index()
     df = df.rename(columns={"Código área de pernoctación":"ID_GRUPO"})
+    
+    areas_geo = 'celdas_marzo_2020-4.json'
+    dfe = df_estacional
+    geo = gpd.read_file(areas_geo)
  
-    return df, df_areas
+    return df, dfe, df_areas, geo
 
 
-df, df_areas = load_data()
+df, dfe, df_areas, geo = load_data()
 area_data = 0 #inicialmente no hay área seleccionada
 day = display_day() #obtenemos el día seleccionado de los 4 posibles
+
+
+# option = st.sidebar.selectbox(
+#     'Elige área',
+#      sorted(df_areas['LITERAL_GRUPO'].unique()))
+
 print ("Mando a dibujar")
-area_code = display_map(df, day)
+area_code = display_map(df, day, geo)
 
 
 
@@ -125,7 +136,10 @@ area_code = display_map(df, day)
 
 
 if (area_code!='0000'):
-     area_nombre =  set(list(df_areas.query('ID_GRUPO == @area_code')['LITERAL_GRUPO']))
+     #area_nombre =  set(list(df_areas.query('ID_GRUPO == @area_code')['LITERAL_GRUPO']))
+     
+     
+     area_nombre = df_areas.query('ID_GRUPO == @area_code')['LITERAL_GRUPO'].iloc[0]
      st.header(f'Detalle del área: {area_nombre}')    
 
      a = df_areas.query('ID_GRUPO == @area_code')['POB_GRUPO'].iloc[0]
@@ -133,18 +147,26 @@ if (area_code!='0000'):
      f = df.query('ID_GRUPO == @area_code and FECHA == @day')['Nº de residentes en área de residencia que pernoctan en área de pernoctación'].iloc[0]
      c = f - e
      
+     p_out = dfe.query('`Código área de residencia`== @area_code and FECHA == @day and `Código área de pernoctación`!= @area_code')
+     p_in = dfe.query('`Código área de pernoctación`== @area_code and FECHA == @day and `Código área de residencia`!= @area_code')
+     
+     #st.write(p_out)
+     #st.write(p_in)
+     
+     n_out = str(len(p_out))
+     n_in = str(len(p_in))
      
      st.subheader(':family: Población residente en el área: ' + str(a)) 
      st.subheader(':house: Población residente que se queda en el área: ' + str(c) + ' (' + str(round(c/a * 100,2)) + '%)') 
      st.subheader(':moon: Población que pernocta en el area: '  + str(f) + ' (' + str(round(f/a * 100,2)) + '%)') 
      st.subheader(':car: Población que llega al área: '  + str(e) + ' ('  + str(round(e/a * 100,2)) + '%)') 
      st.subheader(':chart_with_upwards_trend: Variación de población: '  + str(f-a) + " (" + str(round((f-a)/a * 100,2)) + '%)') 
+     
+     st.subheader(':chart_with_upwards_trend: Número de destinos a dónde se desplazan: ' + n_out) 
+     st.subheader(':chart_with_upwards_trend: Número de orígenes desde dónde vienen: ' + n_in) 
+     
+    
    
-   
-   
-     # col1, col2 = st.columns(2)
-     # with col1:
-     #     st.subheader(':house: Población residente que se queda en el área: ' + str(c) + ' (C) ')
-     # with col2:
-     #     st.subheader(str(round(c/a * 100,2)) + '%') 
+ 
+
   
